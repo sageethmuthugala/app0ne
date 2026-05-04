@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevStudio | Pro Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; background: #020617; color: #94a3b8; }
+        #editor { font-family: 'Fira Code', monospace; resize: none; outline: none; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- STARTUP DASHBOARD -->
+    <div id="projectModal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950">
+        <div class="glass w-full max-w-2xl rounded-[3rem] p-12 shadow-2xl text-center">
+            <h1 class="text-5xl font-black text-white tracking-tighter mb-4 italic">DevStudio<span class="text-blue-500">.</span></h1>
+            <p class="text-slate-500 mb-12">Streamlined Development Environment</p>
+
+            <div class="max-w-md mx-auto space-y-4 mb-16">
+                <input type="text" id="projectNameInput" placeholder="Project Name..." class="w-full p-5 bg-slate-900 border border-slate-800 rounded-2xl text-white text-center outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
+                <button onclick="initNew()" class="w-full bg-blue-600 hover:bg-blue-500 p-5 rounded-2xl font-black text-white transition-all uppercase tracking-widest text-sm">
+                    Create
+                </button>
+            </div>
+
+            <div class="text-left">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-white/5 pb-2">Projects</h3>
+                <div id="projectList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-2 custom-scroll"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div id="mainApp" class="hidden flex flex-col h-full">
+        <header class="h-16 border-b border-white/5 flex justify-between items-center px-8 bg-slate-950/50 relative z-50">
+            <div class="flex items-center gap-6">
+                <button onclick="location.reload()" class="font-black text-xl text-white italic tracking-tighter">DS<span class="text-blue-500">.</span></button>
+                <div class="h-4 w-px bg-slate-800"></div>
+                <div class="flex items-center gap-3">
+                    <span id="activeTitle" class="text-xs font-bold text-slate-200 tracking-widest uppercase italic">Project</span>
+                    <button onclick="renameProject()" class="text-slate-500 hover:text-blue-400 transition" title="Rename">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-width="2.5"></path></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 items-center">
+                <!-- PRIMARY SAVE BUTTON -->
+                <button onclick="save()" class="text-[10px] font-black px-8 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 uppercase tracking-widest">
+                    Save
+                </button>
+
+                <div class="h-6 w-px bg-slate-800 mx-2"></div>
+
+                <!-- TOOLS: EXPORT & DELETE -->
+                <button onclick="download()" class="p-2 text-slate-500 hover:text-white transition" title="Export HTML">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </button>
+                <button onclick="deleteProject(activeProject, event, true)" class="p-2 text-slate-500 hover:text-red-500 transition" title="Delete Project">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"></path></svg>
+                </button>
+                
+                <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+                <button onclick="location.reload()" class="p-2 text-slate-500 hover:text-white transition" title="Exit">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-width="2"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden relative">
+            <div class="flex-1 bg-[#010409]"><textarea id="editor" spellcheck="false" class="w-full h-full bg-transparent p-12 text-blue-100/60 leading-relaxed overflow-auto outline-none"></textarea></div>
+            <div class="w-1/2 p-6 bg-slate-950"><div class="h-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border-[12px] border-slate-900"><iframe id="viewer" class="w-full h-full border-none"></iframe></div></div>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const viewer = document.getElementById('viewer').contentWindow.document;
+        let activeProject = "";
+        const DB_KEY = 'devstudio_linked_v9';
+
+        function initNew() {
+            const name = document.getElementById('projectNameInput').value.trim();
+            if(!name) return;
+            loadWorkspace(name, `<!DOCTYPE html>\n<html>\n<head>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body class="bg-white p-20">\n  <h1 class="text-4xl font-black">${name}</h1>\n  <p class="text-slate-500 mt-2">Start building something great.</p>\n</body>\n</html>`);
+        }
+
+        function loadWorkspace(name, content) {
+            activeProject = name;
+            document.getElementById('activeTitle').innerText = name;
+            document.getElementById('projectModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            editor.value = content;
+            updatePreview();
+        }
+
+        function save() {
+            const db = getDB();
+            db[activeProject] = {
+                code: editor.value,
+                lastSync: new Date().toLocaleString(),
+                owner: "Primary User"
+            };
+            saveDB(db);
+            renderList();
+            alert("Saved.");
+        }
+
+        function renameProject() {
+            const newName = prompt("Rename to:", activeProject);
+            if (newName && newName.trim() && newName.trim() !== activeProject) {
+                const db = getDB();
+                db[newName.trim()] = { ...db[activeProject], lastSync: new Date().toLocaleString() };
+                delete db[activeProject];
+                saveDB(db);
+                activeProject = newName.trim();
+                document.getElementById('activeTitle').innerText = activeProject;
+                renderList();
+            }
+        }
+
+        function download() {
+            const blob = new Blob([editor.value], {type: 'text/html'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${activeProject}.html`;
+            a.click();
+        }
+
+        function deleteProject(name, e, returnToMenu = false) {
+            if(e) e.stopPropagation();
+            if(confirm(`Permanently delete "${name}"?`)) {
+                const db = getDB();
+                delete db[name];
+                saveDB(db);
+                renderList();
+                if(returnToMenu) location.reload();
+            }
+        }
+
+        function getDB() { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); }
+        function saveDB(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+        function renderList() {
+            const list = document.getElementById('projectList');
+            const db = getDB();
+            list.innerHTML = "";
+            Object.keys(db).forEach(name => {
+                const div = document.createElement('div');
+                div.className = "p-4 bg-slate-900 border border-slate-800 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-slate-800";
+                div.onclick = () => loadWorkspace(name, db[name].code);
+                div.innerHTML = `<span class="text-xs font-bold text-slate-300 uppercase">${name}</span>
+                                <button onclick="deleteProject('${name}', event)" class="text-slate-600 hover:text-red-500 p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"></path></svg></button>`;
+                list.appendChild(div);
+            });
+        }
+
+        function updatePreview() {
+            viewer.open();
+            viewer.write(editor.value);
+            viewer.close();
+        }
+
+        editor.addEventListener('input', updatePreview);
+        window.onload = renderList;
+    </script>
+</body>
+</html>
